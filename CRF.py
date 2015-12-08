@@ -1,32 +1,67 @@
 # Implementation of a conditional random field model
 
+# we use the convention that the 'underlying' data is in the first row, and the observations are in the second'
+#
+#     -- y1 --- y2 --- ...
+#         |     |
+#        x1     x2
+# becomes:
+# [ [y1, y2,...]
+#   [x1, x2,...] ]
+
+import numpy as np
 
 
+class CRF(object):
+    """ Implements a graphical model as a list of transition matrices conditioned on x"""
+ 
+    def __init__(self, params, basisFns):
+        self.params = params
+        self.basisFns = basisFns
 
 
+    def findProb(self, data):
+        #calculates the (conditional) probability of the given sequence
+        ys = data[0,:]
+        xs = data[1,:]
 
-def conditionalProbs(ysize, xdata, params, funcs):
-    #makes conditional probailities of the transition y -> y' given the xdata (sequence)
-    #each of the conditional probabilities is a ysize x ysize matrix
+        matList = makeMats(x)
+        Zmat = findZ(xs, matList)
+        Z = Zmat[ys[0], ys[-1]]
 
-    #for now, assumes a chain of dependencies
-    lambdaVals = params[0, :]  #the last lambda value never comes into play, and should always be fixed
-    muVals = params[1, :]
+        running = 1
+        for index in range(1, len(self)+1):
+            running *= self.matList[index](xs)[ ys[index-1], ys[index] ]
 
-    ffuncs = funcs[0]
-    gfuncs = funcs[1]
-
-    # params should be a 2xN matrix of values
-    if params.shape[1] != xdata.shape[1]:
-        raise Exception('Wrong number of parameters')
-    if (len(ffuncs) != len(gfuncs)) or (len( ffuncs ) != params.shape[1]:
-        raise Exception('Wrong number of functions')
+        return running / Z
 
 
-    #calculate a matrix for each position in the xdata sequence:
-    transitions = [0] * xdata.shape[1]
-    for index = 
+    def updateWeights(self, data, delta):
+        #updates the weights based on the given data
+        pass
 
-    energy = 
+
+    ################# utility functions ####################
+    def makeMats(x):
+        #makes matrix list from the current parameters and 
+
+        #Basis functions are assumed to return matrices of the correct size.
+        outsMats = [0]*len(x)
+
+        for iMat in range( len(x) ):
+            currMatrix = 0
+            for k in range(len(params)):
+                currMatrix = currMatrix + params[k] * basisFns[k](iMat, x)
+            outsMats[iMat] = np.exp( currMatrix )
+
+
+    def findZ(x, matList):
+        #finds the normalization for the pdf conditioned on x
+        running = matList[0](x)
+        for entry in matList[1:]:
+            # update the running matrix
+            running = np.dot(running, entry(x) )
+
+        return running
 
 
