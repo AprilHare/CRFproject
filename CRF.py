@@ -28,11 +28,13 @@ class CRF(object):
         matList = self.makeMats(xs)
 
         Zmat = self.findZ(matList)
-        Z = Zmat[ys[0], ys[-1]]
+        Z = Zmat[ys[0], ys[-1]] # this index doesn't actually matter thanks to symmetries of first and last matrices
 
         running = 1
-        for index in range(1, len(matList)):
-            running *= matList[index][ ys[index-1], ys[index] ]
+        for index in range(0, len(matList)):
+            prevY = ys[max( 0, index-1)]
+            nextY = ys[index % len(ys)]
+            running *= matList[index][ prevY, nextY ]
 
         return running / Z
 
@@ -47,9 +49,9 @@ class CRF(object):
         #makes matrix list from the current parameters and 
 
         #Basis functions are assumed to return matrices of the correct size.
-        outsMats = [0]*len(x)
+        outsMats = [0]*( len(x)+1 )
 
-        for iMat in range( len(x) ):
+        for iMat in range( len(x) + 1):
             currMatrix = 0
             for k in range(len(self.params)):
                 currMatrix = currMatrix + self.params[k] * self.basisFns[k](iMat, x)
