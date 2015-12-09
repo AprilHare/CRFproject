@@ -25,13 +25,14 @@ class CRF(object):
         ys = data[0,:]
         xs = data[1,:]
 
-        matList = makeMats(x)
-        Zmat = findZ(xs, matList)
+        matList = self.makeMats(xs)
+
+        Zmat = self.findZ(matList)
         Z = Zmat[ys[0], ys[-1]]
 
         running = 1
-        for index in range(1, len(self)+1):
-            running *= self.matList[index](xs)[ ys[index-1], ys[index] ]
+        for index in range(1, len(matList)):
+            running *= matList[index][ ys[index-1], ys[index] ]
 
         return running / Z
 
@@ -42,7 +43,7 @@ class CRF(object):
 
 
     ################# utility functions ####################
-    def makeMats(x):
+    def makeMats(self, x):
         #makes matrix list from the current parameters and 
 
         #Basis functions are assumed to return matrices of the correct size.
@@ -50,17 +51,19 @@ class CRF(object):
 
         for iMat in range( len(x) ):
             currMatrix = 0
-            for k in range(len(params)):
-                currMatrix = currMatrix + params[k] * basisFns[k](iMat, x)
+            for k in range(len(self.params)):
+                currMatrix = currMatrix + self.params[k] * self.basisFns[k](iMat, x)
             outsMats[iMat] = np.exp( currMatrix )
 
+        return outsMats
 
-    def findZ(x, matList):
+
+    def findZ(self, matList):
         #finds the normalization for the pdf conditioned on x
-        running = matList[0](x)
+        running = matList[0]
         for entry in matList[1:]:
             # update the running matrix
-            running = np.dot(running, entry(x) )
+            running = np.dot(running, entry )
 
         return running
 
