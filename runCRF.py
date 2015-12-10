@@ -83,16 +83,14 @@ def generateBasis(yvals, xvals):
     glist = [ggen(i) for i in range(xvals*yvals)]
 
 
-
-
-    return flist  + glist
+    return flist + glist, (len(flist), len(glist))
 
 
 
-basisFns = generateBasis(2,2)
-initialParams = np.random.rand(len(basisFns))
+basisFns, fsgs = generateBasis(2,2)
+initialParams = 0*np.random.rand(len(basisFns))
 
-model = CRF( initialParams, basisFns )
+model = CRF( initialParams, basisFns, fsgs )
 data = np.array( [[0,1], [0,1]])
 
 
