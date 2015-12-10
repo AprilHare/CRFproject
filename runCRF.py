@@ -34,6 +34,7 @@ def generateBasis(yvals, xvals):
         matTemplate[0, i1 ] = 1
         initialList.append( matTemplate)
 
+
     finalList = []
     for i1 in range(yvals):
         matTemplate = np.zeros( (yvals, 1) )
@@ -88,10 +89,10 @@ def generateBasis(yvals, xvals):
 
 
 basisFns, fsgs = generateBasis(2,2)
-initialParams = 0*np.random.rand(len(basisFns))
+initialParams = np.random.rand(len(basisFns))
 
 model = CRF( initialParams, basisFns, fsgs )
-data = np.array( [[0,1], [0,1]])
+data = np.array( [[0,0], [0,1]])
 
 
 

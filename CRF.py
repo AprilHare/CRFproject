@@ -60,7 +60,7 @@ class CRF(object):
                 forward[index] = nextFor
 
             for index in range(len(matList), 0, -1):
-                if index == (len(matList) +1):
+                if index == (len(matList)):
                     nextBack = matList[index][0,:]
                 else:
                     currBack = nextBack
@@ -81,7 +81,7 @@ class CRF(object):
             return runningTotal / norm
 
 
-        def edgeCount(dataPoint, basisFun):
+        def fEdgeCount(dataPoint, basisFun):
             #returns edge count associated with the given basis function
             ys = dataPoint[0,:]
             xs = dataPoint[1,:]
@@ -90,8 +90,41 @@ class CRF(object):
             for edge in range( len(ys) + 1):
                 basisMat = basisFun(edge, xs)
                 #accounts for starts and stops
-                count += basisMat[ ys[ (edge % len(ys) ), ( (edge + 1) % len(ys) ) ] ]
+                #print 'edge', edge, basisMat.shape
+
+                if edge == 0:
+                    rowIndex = 0
+                    colIndex = ys[edge]
+                elif edge == len(ys):
+                    rowIndex = ys[edge - 1]
+                    colIndex = 0
+                else:
+                    rowIndex = ys[ edge - 1 ]
+                    colIndex = ys[ edge ]
+
+                count += basisMat[ rowIndex, colIndex ]
             return count
+
+
+        def gEdgeCount(dataPoint, basisFun):
+            #returns edge count associated with the given basis function
+            ys = dataPoint[0,:]
+            xs = dataPoint[1,:]
+
+            count = 0
+            for edge in range( len(ys)):
+                basisMat = basisFun(edge, xs)
+                #accounts for starts and stops
+                #print 'edge', edge, basisMat.shape
+
+                count += basisMat[ ys[edge] ]
+            return count
+
+
+
+
+
+
 
 
         def predictedCount(dataPoint, basisFun):
@@ -114,32 +147,37 @@ class CRF(object):
                         running += message * basis
 
 
+        numFs = self.fsgs[0]
+        numGs = self.fsgs[1]
+        totalBases = sum( self.fsgs)
         #the empirical expected edge counts
         # .........................................................................................................
-        empiricalF = [0] * fsgs[0]
-        empiricalG = [0] * fsgs[1]
+        empiricalF = [0] * numFs
+        empiricalG = [0] * numGs
 
-        for Findex in range(fsgs[0]):
+        for Findex in range(numFs):
             #these are the f basis vectors
-            empiricalF[Findex] = empiricalExp(data, lambda x: edgeCount( x, self.basisFns[Findex]) )
+            print 'f', Findex
+            empiricalF[Findex] = empiricalExp(data, lambda x: fEdgeCount( x, self.basisFns[Findex]) )
 
-        for Gindex in range(fsgs[0], sum(fsgs)):
+        for Gindex in range(numFs, totalBases):
             #these are the g basis vectors
-            empiricalG[ Gindex-fsgs[0] ] = empiricalExp(data, lambda x: edgeCount( x, self.basisFns[Gindex]) )
+            print 'g', Gindex
+            empiricalG[ Gindex-numFs ] = empiricalExp(data, lambda x: gEdgeCount( x, self.basisFns[Gindex]) )
 
 
         #the expected edge counts base on x data
         # .........................................................................................................
-        expectedF = [0] * fsgs[0]
-        expectedG = [0] * fsgs[1]
+        expectedF = [0] * numFs
+        expectedG = [0] * numGs
 
-        for Findex in range(fsgs[0]):
+        for Findex in range(numFs):
             #these are the f basis vectors
             expectedF[Findex] = empiricalExp(data, lambda x: predictedCount( x, self.basisFns[Findex]) )
 
-        for Gindex in range(fsgs[0], sum(fsgs)):
+        for Gindex in range(numFs, totalBases):
             #these are the g basis vectors
-            expectedG[ Gindex-fsgs[0] ] = empiricalExp(data, lambda x: predictedCount( x, self.basisFns[Gindex]) )
+            expectedG[ Gindex-numFs ] = empiricalExp(data, lambda x: predictedCount( x, self.basisFns[Gindex]) )
 
 
 
