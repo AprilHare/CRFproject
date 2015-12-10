@@ -51,6 +51,21 @@ class CRF(object):
             forward = [0]*len(matList)
             backward = [0]*len(matList)
 
+            for index in range( len(matList) ):
+                if index == 0:
+                    nextFor = matList[index][0,:]
+                else:
+                    currFor = nextFor
+                    nextFor = np.dot( currFor, matList[index])
+                forward[index] = nextFor
+
+            for index in range(len(matList), 0, -1):
+                if index == (len(matList) +1):
+                    nextBack = matList[index][0,:]
+                else:
+                    currBack = nextBack
+                    nextBack = np.dot( matList[index], currBack)
+                backward[index-1] = nextBack
 
             return [foreward, backward]
 
@@ -94,12 +109,13 @@ class CRF(object):
                 # iterate through the possible values of y and y'
                 for row in range(matSize[0]):
                     for column in range(matSize[1]):
-
-                        message = foreward[edge][row] * matList
+                        message = (foreward[edge][row] * matList[edge][row, column] * backward[edge][column] ) / Z
+                        basis = basisFun(edge, xs)[row, column]
+                        running += message * basis
 
 
         #the empirical expected edge counts
-        # ........................................................................................................
+        # .........................................................................................................
         empiricalF = [0] * fsgs[0]
         empiricalG = [0] * fsgs[1]
 
