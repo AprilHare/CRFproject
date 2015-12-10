@@ -10,7 +10,7 @@
 #   [x1, x2,...] ]
 
 import numpy as np
-
+import math
 
 class CRF(object):
     """ Implements a graphical model as a list of transition matrices conditioned on x"""
@@ -46,30 +46,6 @@ class CRF(object):
         # this could cause problems if the size of the data is not constant
 
         # we need a variety of supporting functions
-        def findMessages(matList):
-            #calculates the messages passed in either direction
-            forward = [0]*len(matList)
-            backward = [0]*len(matList)
-
-            for index in range( len(matList) ):
-                if index == 0:
-                    nextFor = matList[index][0,:]
-                else:
-                    currFor = nextFor
-                    nextFor = np.dot( currFor, matList[index])
-                forward[index] = nextFor
-
-            for index in range(len(matList), 0, -1):
-                if index == (len(matList)):
-                    nextBack = matList[index][0,:]
-                else:
-                    currBack = nextBack
-                    nextBack = np.dot( matList[index], currBack)
-                backward[index-1] = nextBack
-
-            return [foreward, backward]
-
-
         def empiricalExp(data, funToExp):
             #calculates the empirical expectation of the function given.
             norm = float( len(data) )
@@ -121,13 +97,35 @@ class CRF(object):
             return count
 
 
+        def findMessages(matList):
+            #calculates the messages passed in either direction
+            forward = [0]* ( len(matList) + 1)
+            backward = [0]* ( len(matList) + 1)
+
+            for index in range( len(matList) +1 ):
+                #print'for', index
+                if index == 0:
+                    #watch out for dimension changing weirdness
+                    nextFor = np.ones(matList[0].shape[1])
+                else:
+                    currFor = nextFor
+                    nextFor = np.dot( currFor, matList[index-1])
+                forward[index] = nextFor
+
+            for index in range(len(matList), -1, -1):
+                #print 'back', index
+                if index == len(matList):
+                    nextBack = np.ones(matList[0].shape[0])
+                else:
+                    currBack = nextBack
+                    nextBack = np.dot( matList[index], currBack)
+                backward[index-1] = nextBack
+
+            return [forward, backward]
 
 
 
-
-
-
-        def predictedCount(dataPoint, basisFun):
+        def fPredictedCount(dataPoint, basisFun):
             #returns the predicted edge count associated with the given basis function
             xs = dataPoint[1, :]
 
@@ -138,13 +136,51 @@ class CRF(object):
             matSize = matList[0].shape
 
             running = 0
-            for edge in range( len(ys) + 1 ):
+            for edge in range( len(xs) + 1 ):
                 # iterate through the possible values of y and y'
                 for row in range(matSize[0]):
                     for column in range(matSize[1]):
-                        message = (foreward[edge][row] * matList[edge][row, column] * backward[edge][column] ) / Z
-                        basis = basisFun(edge, xs)[row, column]
+                        #print row, column, basisFun(edge, xs).shape
+
+                        if edge == 0:
+                            rowIndex = 0
+                            columnIndex = column
+                        elif edge == len(xs):
+                            rowIndex = row
+                            columnIndex = 0
+                        else:
+                            rowIndex = row
+                            columnIndex = column
+
+                        message = (foreward[edge][rowIndex] * matList[edge][rowIndex, columnIndex] * backward[edge + 1][columnIndex] ) / Z[0,0]
+                        basis = basisFun(edge, xs)[rowIndex, columnIndex]
                         running += message * basis
+
+            return running
+
+
+
+        def gPredictedCount(dataPoint, basisFun):
+            #returns the predicted edge count associated with the given basis function
+            xs = dataPoint[1, :]
+
+            matList = self.makeMats(xs)
+            Z = self.findZ(matList)
+            [foreward, backward] = findMessages( matList )
+
+            matSize = matList[0].shape
+
+            running = 0
+            for edge in range( len(xs) ):
+                # iterate through the possible values of y and y'
+                for column in range(matSize[0]):
+                    #print row, column, basisFun(edge, xs).shape
+                    message = (foreward[edge + 1][column] * backward[edge + 1][column] ) / Z[0, 0]
+                    basis = basisFun(edge, xs)[column]
+                    running += message * basis
+
+
+            return running
 
 
         numFs = self.fsgs[0]
@@ -157,14 +193,17 @@ class CRF(object):
 
         for Findex in range(numFs):
             #these are the f basis vectors
-            print 'f', Findex
+            #print 'f', Findex
             empiricalF[Findex] = empiricalExp(data, lambda x: fEdgeCount( x, self.basisFns[Findex]) )
 
         for Gindex in range(numFs, totalBases):
             #these are the g basis vectors
-            print 'g', Gindex
+            #print 'g', Gindex
             empiricalG[ Gindex-numFs ] = empiricalExp(data, lambda x: gEdgeCount( x, self.basisFns[Gindex]) )
 
+        empirical = empiricalF + empiricalG
+
+        print empirical
 
         #the expected edge counts base on x data
         # .........................................................................................................
@@ -173,12 +212,24 @@ class CRF(object):
 
         for Findex in range(numFs):
             #these are the f basis vectors
-            expectedF[Findex] = empiricalExp(data, lambda x: predictedCount( x, self.basisFns[Findex]) )
+            #print 'f', Findex
+            expectedF[Findex] = empiricalExp(data, lambda x: fPredictedCount( x, self.basisFns[Findex]) )
 
         for Gindex in range(numFs, totalBases):
+            #print 'g', Gindex
             #these are the g basis vectors
-            expectedG[ Gindex-numFs ] = empiricalExp(data, lambda x: predictedCount( x, self.basisFns[Gindex]) )
+            expectedG[ Gindex-numFs ] = empiricalExp(data, lambda x: gPredictedCount( x, self.basisFns[Gindex]) )
 
+        expected = expectedF + expectedG
+
+
+        S = len(self.basisFns)
+
+        #update parameters
+        for index in range( len (self.params) ):
+            #print empirical[index], expected[index]
+            #print float( empirical[index] ) / expected[index] 
+            self.params[index] += math.log( (empirical[index] + 1E-4 ) / expected[index] ) / S
 
 
 

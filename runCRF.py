@@ -8,7 +8,7 @@ from CRF import *
 
 #        0     1     2     3
 # start -- y0 -- y1 -- y2 -- stop
-#          |0    |1    |2
+#          | 0   | 1   | 2
 #          x0    x1    x2 
 
 
