@@ -64,18 +64,17 @@ def ribGen():
             encodedEmits.append( code[emits[nextState]] )
         else:
             out = np.random.choice(other)
-            print toEmits
-            toEmits += emits[out]
-            encodedEmits.append( code[emits[outs]] )
+            toEmits += out
+            encodedEmits.append( code[out] )
 
 
         actual += emits[nextState]
         encodedActual.append( code[emits[nextState]] ) 
 
-    return (toEmits, actual)#, np.array( [ encodedEmits, encodedActual ] )
+    return (toEmits, actual), (encodedEmits, encodedActual)  #, np.array( [ encodedEmits, encodedActual ] )
 
-train = [ ribGen() for i in range(2000)] 
-test = [ribGen() for i in range(500)]
+train = [ ribGen()[1] for i in range(2000)] 
+test = [ribGen()[1] for i in range(500)]
 
 
 

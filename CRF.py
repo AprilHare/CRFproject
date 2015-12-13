@@ -1,10 +1,13 @@
 # Implementation of a conditional random field model
 
-# we use the convention that the 'underlying' data is in the first row, and the observations are in the second'
+# we use the convention that the 'underlying' data is in the first row
+# and the observations are in the second
 #
-#     -- y1 --- y2 --- ...
-#         |     |
-#        x1     x2
+#        0     1     2     3
+# start -- y0 -- y1 -- y2 -- stop
+#          | 0   | 1   | 2
+#          x0    x1    x2 
+#
 # becomes:
 # [ [y1, y2,...]
 #   [x1, x2,...] ]
@@ -15,10 +18,11 @@ import math
 class CRF(object):
     """ Implements a graphical model as a list of transition matrices conditioned on x"""
  
-    def __init__(self, params, basisFns, fsgs):
+    def __init__(self, params, basisFns, fsgs, numYnumX):
         self.params = params
         self.basisFns = basisFns
-        self.fsgs = fsgs      # number of f and g basis functions
+        self.fsgs = fsgs      # number of f and g basis functions  (numf, numg)
+        self.numYnumX = numYnumX        #num of values for y and x  (numY, numX)
 
     def findProb(self, data):
         #calculates the (conditional) probability of the given sequence
@@ -37,6 +41,43 @@ class CRF(object):
             running *= matList[index][ prevY, nextY ]
 
         return running / Z
+
+    def findLabels(self, xdata):
+        # implements a Viterbi algorithm to determine the most likely Y sequence
+        #  given current parameters and the X sequence
+        Yoptions = self.numYnumX[0]
+        matList = self.makeMats(xdata)
+
+        #There is one path for each Y option
+        paths = [ (i,) for i in range(Yoptions) ]
+        nextPaths = [ (i,) for i in range(Yoptions) ]
+
+        probs = matList[0][0,:]  # the first matrix has row symmetry
+        nextProbs = matList[0][0,:]
+
+        for transMat in matList[1:-1]:
+            # We want the probabilities of paths that end in each value y.
+            transProbs = probs * transMat.T
+
+            bestPath = np.argmax(transProbs, 1)
+            bestProbs = np.max( transProbs, 1)
+            for terminal in range(Yoptions):
+                #print paths, probs
+                currBest = bestPath[terminal] # this is the best path to the terminal value
+                pathToTerminal = paths[currBest] + (terminal, )
+
+                nextPaths[terminal] = pathToTerminal
+                nextProbs[terminal] = bestProbs[terminal]
+
+            paths = nextPaths
+            probs = nextProbs
+
+        #print paths, probs
+        #choose a path
+        finalProbs = probs * matList[-1].T
+        finalIndex = np.argmax( finalProbs, 1)[0] # there should be symmetry
+
+        return list( paths[finalIndex] )
 
 
     def updateWeights(self, data):
@@ -124,7 +165,6 @@ class CRF(object):
             return [forward, backward]
 
 
-
         def fPredictedCount(dataPoint, basisFun):
             #returns the predicted edge count associated with the given basis function
             xs = dataPoint[1, :]
@@ -159,7 +199,6 @@ class CRF(object):
             return running
 
 
-
         def gPredictedCount(dataPoint, basisFun):
             #returns the predicted edge count associated with the given basis function
             xs = dataPoint[1, :]
@@ -183,6 +222,7 @@ class CRF(object):
             return running
 
 
+
         numFs = self.fsgs[0]
         numGs = self.fsgs[1]
         totalBases = sum( self.fsgs)
@@ -203,7 +243,7 @@ class CRF(object):
 
         empirical = empiricalF + empiricalG
 
-        print empirical
+        #print empirical
 
         #the expected edge counts base on x data
         # .........................................................................................................
@@ -220,8 +260,10 @@ class CRF(object):
             #these are the g basis vectors
             expectedG[ Gindex-numFs ] = empiricalExp(data, lambda x: gPredictedCount( x, self.basisFns[Gindex]) )
 
+
         expected = expectedF + expectedG
 
+        #print expected
 
         S = len(self.basisFns)
 
@@ -229,7 +271,7 @@ class CRF(object):
         for index in range( len (self.params) ):
             #print empirical[index], expected[index]
             #print float( empirical[index] ) / expected[index] 
-            self.params[index] += math.log( (empirical[index] + 1E-4 ) / expected[index] ) / S
+            self.params[index] += math.log( (empirical[index] + 1E-4 ) / (expected[index] + 1E-4) ) / S
 
 
 
