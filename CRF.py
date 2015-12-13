@@ -265,7 +265,7 @@ class CRF(object):
 
         #print expected
 
-        S = len(self.basisFns)
+        S = 5*len(self.basisFns)
 
         #update parameters
         for index in range( len (self.params) ):
