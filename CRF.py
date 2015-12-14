@@ -74,7 +74,7 @@ class CRF(object):
 
             #print paths, probs
         #choose a path'
-        print paths
+        #print paths
         finalProbs = probs * matList[-1].T
         finalIndex = np.argmax( finalProbs, 1)[0] # there should be symmetry
 
@@ -172,7 +172,7 @@ class CRF(object):
             #returns the predicted edge count associated with the given basis function
             xs = dataPoint[1, :]
 
-            # attempt to memoize for speed
+            # memoize for speed
             if tuple(xs) in matMemo:
                 (matList, Z, [forward, backward]) = matMemo[tuple(xs)]
 
@@ -189,23 +189,19 @@ class CRF(object):
             running = 0
             for edge in range( len(xs) + 1 ):
                 # iterate through the possible values of y and y'
-                for row in range(matSize[0]):
-                    for column in range(matSize[1]):
-                        #print row, column, basisFun(edge, xs).shape
+                iterOver = np.nonzero(  basisFun(edge, xs) )        # nonzero indices of the basis function
 
-                        if edge == 0:
-                            rowIndex = 0
-                            columnIndex = column
-                        elif edge == len(xs):
-                            rowIndex = row
-                            columnIndex = 0
-                        else:
-                            rowIndex = row
-                            columnIndex = column
+                for entryI in range( len( iterOver[0])):
+                    #iterate through the pairs of indices
+                    rowIndex = iterOver[0][entryI]
+                    columnIndex = iterOver[1][entryI]
 
-                        message = (forward[edge][rowIndex] * matList[edge][rowIndex, columnIndex] * backward[edge + 1][columnIndex] ) / Z[0,0]
-                        basis = basisFun(edge, xs)[rowIndex, columnIndex]
-                        running += message * basis
+                    message = (forward[edge][rowIndex] * matList[edge][rowIndex, columnIndex] * backward[edge + 1][columnIndex] ) / Z[0,0]
+                    basis = basisFun(edge, xs)[rowIndex, columnIndex]
+                    running += message * basis
+
+                    if basisFun(edge, xs)[rowIndex, columnIndex] < 1E-6:
+                        print "Thats wierd"
 
             return running
 
@@ -214,7 +210,7 @@ class CRF(object):
             #returns the predicted edge count associated with the given basis function
             xs = dataPoint[1, :]
 
-            # attempt to memoize for speed
+            # memoize for speed
             if tuple(xs) in matMemo:
                 (matList, Z, [forward, backward]) = matMemo[tuple(xs)]
 
@@ -230,7 +226,7 @@ class CRF(object):
 
             running = 0
             for edge in range( len(xs) ):
-                # iterate through the possible values of y and y'
+                # iterate through the possible values of y
                 for column in range(matSize[0]):
                     #print row, column, basisFun(edge, xs).shape
                     message = (forward[edge + 1][column] * backward[edge + 1][column] ) / Z[0, 0]

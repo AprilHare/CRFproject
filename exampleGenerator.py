@@ -70,6 +70,6 @@ def ribGen():
 
     return (toEmits, actual), np.array([actual, encodedEmits])  #, np.array( [ encodedEmits, encodedActual ] )
 
-train = [ ribGen()[1] for i in range(800)] 
+train = [ ribGen()[1] for i in range(1000)] 
 test = [ribGen()[1] for i in range(300)]
 

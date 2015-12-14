@@ -100,7 +100,7 @@ def trainModel(train):
     prev[:] = model.params[:]
     diff = 1
 
-    while diff > 0.5:
+    while diff > 0.21:
         #update the parameters
         print '....................diff.....................', diff
         model.updateWeights(train)
@@ -108,6 +108,16 @@ def trainModel(train):
         diff = np.linalg.norm( prev - model.params )
         prev[:] = model.params[:]
 
+
+def findFitErrs(test):
+    accurate = 0
+    total = len(test)
+
+    for entry in test:
+        if ( model.findLabels(entry[1,:]) == entry[0,:] ).all():
+            accurate += 1
+
+    return float( accurate) / total
 
 
 
