@@ -87,12 +87,28 @@ def generateBasis(yvals, xvals):
     return flist + glist, (len(flist), len(glist))
 
 
-numY, numX = 2,2
+numY, numX = 6,4
 basisFns, fsgs = generateBasis(numY, numX)
 initialParams = np.random.rand(len(basisFns))
 
 model = CRF( initialParams, basisFns, fsgs, (numY, numX))
-data = np.array( [[0,0], [0,1]])
+#data = np.array( [[0,0], [0,1]])
+
+
+def trainModel(train):
+    prev = []
+    prev[:] = model.params[:]
+    diff = 1
+
+    while diff > 0.5:
+        #update the parameters
+        print '....................diff.....................', diff
+        model.updateWeights(train)
+
+        diff = np.linalg.norm( prev - model.params )
+        prev[:] = model.params[:]
+
+
 
 
 

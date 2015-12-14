@@ -33,8 +33,8 @@ def ribGen():
     state = 0
 
     transMat = np.zeros((6, 6))
-    transMat[1, 0] = 0.7
-    transMat[2, 0] = 0.3
+    transMat[1, 0] = 0.5
+    transMat[2, 0] = 0.5
 
     transMat[3, 1] = 1
     transMat[4, 2] = 1
@@ -50,14 +50,14 @@ def ribGen():
 
     state = 0
     toEmits = ''
-    actual = ''
+    actual = []
 
     encodedEmits = []
-    encodedActual = []
 
     while state < 5:
         nextState = np.random.choice(range(0, 6), p = transMat[:, state])
         state = nextState
+        actual.append(nextState)
 
         if np.random.rand() < (28./ 32):
             toEmits += emits[nextState]
@@ -68,15 +68,8 @@ def ribGen():
             encodedEmits.append( code[out] )
 
 
-        actual += emits[nextState]
-        encodedActual.append( code[emits[nextState]] ) 
+    return (toEmits, actual), np.array([actual, encodedEmits])  #, np.array( [ encodedEmits, encodedActual ] )
 
-    return (toEmits, actual), (encodedEmits, encodedActual)  #, np.array( [ encodedEmits, encodedActual ] )
-
-train = [ ribGen()[1] for i in range(2000)] 
-test = [ribGen()[1] for i in range(500)]
-
-
-
-
+train = [ ribGen()[1] for i in range(800)] 
+test = [ribGen()[1] for i in range(300)]
 

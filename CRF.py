@@ -69,11 +69,12 @@ class CRF(object):
                 nextPaths[terminal] = pathToTerminal
                 nextProbs[terminal] = bestProbs[terminal]
 
-            paths = nextPaths
-            probs = nextProbs
+            paths[:] = nextPaths[:]
+            probs[:] = nextProbs[:]
 
-        #print paths, probs
-        #choose a path
+            #print paths, probs
+        #choose a path'
+        print paths
         finalProbs = probs * matList[-1].T
         finalIndex = np.argmax( finalProbs, 1)[0] # there should be symmetry
 
@@ -119,6 +120,7 @@ class CRF(object):
                     rowIndex = ys[ edge - 1 ]
                     colIndex = ys[ edge ]
 
+                #print basisMat, rowIndex, colIndex
                 count += basisMat[ rowIndex, colIndex ]
             return count
 
@@ -165,13 +167,22 @@ class CRF(object):
             return [forward, backward]
 
 
+        matMemo = {}
         def fPredictedCount(dataPoint, basisFun):
             #returns the predicted edge count associated with the given basis function
             xs = dataPoint[1, :]
 
-            matList = self.makeMats(xs)
-            Z = self.findZ(matList)
-            [foreward, backward] = findMessages( matList )
+            # attempt to memoize for speed
+            if tuple(xs) in matMemo:
+                (matList, Z, [forward, backward]) = matMemo[tuple(xs)]
+
+            else:
+                matList = self.makeMats(xs)
+                Z = self.findZ(matList)
+                [forward, backward] = findMessages( matList )
+
+                matMemo[tuple(xs)] = (matList, Z, [forward, backward])
+
 
             matSize = matList[0].shape
 
@@ -192,7 +203,7 @@ class CRF(object):
                             rowIndex = row
                             columnIndex = column
 
-                        message = (foreward[edge][rowIndex] * matList[edge][rowIndex, columnIndex] * backward[edge + 1][columnIndex] ) / Z[0,0]
+                        message = (forward[edge][rowIndex] * matList[edge][rowIndex, columnIndex] * backward[edge + 1][columnIndex] ) / Z[0,0]
                         basis = basisFun(edge, xs)[rowIndex, columnIndex]
                         running += message * basis
 
@@ -203,9 +214,17 @@ class CRF(object):
             #returns the predicted edge count associated with the given basis function
             xs = dataPoint[1, :]
 
-            matList = self.makeMats(xs)
-            Z = self.findZ(matList)
-            [foreward, backward] = findMessages( matList )
+            # attempt to memoize for speed
+            if tuple(xs) in matMemo:
+                (matList, Z, [forward, backward]) = matMemo[tuple(xs)]
+
+            else:
+                matList = self.makeMats(xs)
+                Z = self.findZ(matList)
+                [forward, backward] = findMessages( matList )
+
+                matMemo[tuple(xs)] = (matList, Z, [forward, backward])
+
 
             matSize = matList[0].shape
 
@@ -214,7 +233,7 @@ class CRF(object):
                 # iterate through the possible values of y and y'
                 for column in range(matSize[0]):
                     #print row, column, basisFun(edge, xs).shape
-                    message = (foreward[edge + 1][column] * backward[edge + 1][column] ) / Z[0, 0]
+                    message = (forward[edge + 1][column] * backward[edge + 1][column] ) / Z[0, 0]
                     basis = basisFun(edge, xs)[column]
                     running += message * basis
 
@@ -233,12 +252,12 @@ class CRF(object):
 
         for Findex in range(numFs):
             #these are the f basis vectors
-            #print 'f', Findex
+            #print 'f emp', Findex
             empiricalF[Findex] = empiricalExp(data, lambda x: fEdgeCount( x, self.basisFns[Findex]) )
 
         for Gindex in range(numFs, totalBases):
             #these are the g basis vectors
-            #print 'g', Gindex
+            #print 'g emp', Gindex
             empiricalG[ Gindex-numFs ] = empiricalExp(data, lambda x: gEdgeCount( x, self.basisFns[Gindex]) )
 
         empirical = empiricalF + empiricalG
@@ -252,12 +271,12 @@ class CRF(object):
 
         for Findex in range(numFs):
             #these are the f basis vectors
-            #print 'f', Findex
+            #print 'f exp', Findex
             expectedF[Findex] = empiricalExp(data, lambda x: fPredictedCount( x, self.basisFns[Findex]) )
 
         for Gindex in range(numFs, totalBases):
-            #print 'g', Gindex
             #these are the g basis vectors
+            #print 'g exp', Gindex
             expectedG[ Gindex-numFs ] = empiricalExp(data, lambda x: gPredictedCount( x, self.basisFns[Gindex]) )
 
 
@@ -265,7 +284,7 @@ class CRF(object):
 
         #print expected
 
-        S = 5*len(self.basisFns)
+        S = len(self.basisFns)
 
         #update parameters
         for index in range( len (self.params) ):
@@ -277,8 +296,7 @@ class CRF(object):
 
     ################# utility functions ####################
     def makeMats(self, x):
-        #makes matrix list from the current parameters and 
-
+        #makes matrix list from the current parameters and x
         #Basis functions are assumed to return matrices of the correct size.
         outsMats = [0]*( len(x)+1 )
 
